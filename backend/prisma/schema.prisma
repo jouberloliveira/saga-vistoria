@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Funcionario {
+  id         String   @id @default(cuid())
+  nome       String
+  usuario    String   @unique
+  senha_hash String
+  ativo      Boolean  @default(true)
+  role       String   @default("funcionario")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  vistorias Vistoria[]
+  fotos     Foto[]
+  auditLogs AuditLog[]
+}
+
+model Cliente {
+  id         String   @id @default(cuid())
+  nome       String
+  documento  String   @unique
+  telefone   String?
+  email      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  vistorias Vistoria[]
+}
+
+model Veiculo {
+  id            String   @id @default(cuid())
+  placa         String   @unique
+  marca         String
+  modelo        String
+  ano           Int
+  cor           String
+  chassi        String?
+  quilometragem Int?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  vistorias Vistoria[]
+}
+
+model Vistoria {
+  id                 String   @id @default(cuid())
+  veiculo_id         String
+  cliente_id         String
+  funcionario_id     String
+  data_inicio        DateTime @default(now())
+  data_fim           DateTime?
+  status             String   @default("rascunho")
+  observacoes_gerais String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  veiculo        Veiculo        @relation(fields: [veiculo_id], references: [id])
+  cliente        Cliente        @relation(fields: [cliente_id], references: [id])
+  funcionario    Funcionario    @relation(fields: [funcionario_id], references: [id])
+  pneus          Pneu[]
+  danos          Dano[]
+  itensFaltantes ItemFaltante[]
+  fotos          Foto[]
+  assinaturas    Assinatura[]
+}
+
+model Pneu {
+  id          String   @id @default(cuid())
+  vistoria_id String
+  posicao     String
+  estado      String
+
+  vistoria Vistoria @relation(fields: [vistoria_id], references: [id])
+}
+
+model Dano {
+  id          String  @id @default(cuid())
+  vistoria_id String
+  tipo        String
+  localizacao String
+  gravidade   String
+  descricao   String?
+
+  vistoria Vistoria @relation(fields: [vistoria_id], references: [id])
+  fotos    Foto[]
+}
+
+model ItemFaltante {
+  id          String @id @default(cuid())
+  vistoria_id String
+  nome        String
+
+  vistoria Vistoria @relation(fields: [vistoria_id], references: [id])
+}
+
+model Foto {
+  id             String   @id @default(cuid())
+  vistoria_id    String
+  dano_id        String?
+  caminho        String
+  data_hora      DateTime @default(now())
+  funcionario_id String
+
+  vistoria    Vistoria    @relation(fields: [vistoria_id], references: [id])
+  dano        Dano?       @relation(fields: [dano_id], references: [id])
+  funcionario Funcionario @relation(fields: [funcionario_id], references: [id])
+}
+
+model Assinatura {
+  id            String   @id @default(cuid())
+  vistoria_id   String
+  tipo          String
+  imagem_base64 String
+  data_hora     DateTime @default(now())
+
+  vistoria Vistoria @relation(fields: [vistoria_id], references: [id])
+}
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  tabela           String
+  registro_id      String
+  acao             String
+  funcionario_id   String?
+  data_hora        DateTime @default(now())
+  dados_anteriores String?
+
+  funcionario Funcionario? @relation(fields: [funcionario_id], references: [id])
+}
