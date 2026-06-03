@@ -35,8 +35,8 @@ router.post('/', async (req: AuthRequest, res) => {
     itensFaltantes?: { nome: string }[];
   };
 
-  if (!veiculo?.placa || !cliente?.documento) {
-    return res.status(400).json({ error: 'veiculo.placa e cliente.documento são obrigatórios' });
+  if (!veiculo?.placa || !veiculo?.marca || !veiculo?.modelo || !veiculo?.ano || !veiculo?.cor || !cliente?.documento) {
+    return res.status(400).json({ error: 'veiculo.placa, veiculo.marca, veiculo.modelo, veiculo.ano, veiculo.cor e cliente.documento são obrigatórios' });
   }
 
   // Upsert veiculo and cliente
