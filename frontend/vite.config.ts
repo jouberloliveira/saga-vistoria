@@ -1,16 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/auth': 'http://localhost:3001',
-      '/vistorias': 'http://localhost:3001',
-      '/funcionarios': 'http://localhost:3001',
-      '/fotos': 'http://localhost:3001',
-      '/uploads': 'http://localhost:3001',
-    }
-  }
+  plugins: [react(), tailwindcss()],
+  server: { port: 5173 },
 })
