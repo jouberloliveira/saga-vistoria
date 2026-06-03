@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  funcionario
+}
+
+enum EstadoPneu {
+  bom
+  desgastado
+  careca
+  furado
+}
+
+enum PosicaoPneu {
+  dianteiro_esquerdo
+  dianteiro_direito
+  traseiro_esquerdo
+  traseiro_direito
+  estepe
+}
+
+enum TipoDano {
+  amassado
+  arranhado
+}
+
+enum GravidadeDano {
+  leve
+  moderado
+  grave
+}
+
+enum TipoAssinatura {
+  funcionario
+  cliente
+}
+
+enum StatusVistoria {
+  rascunho
+  finalizado
+}
+
+model Funcionario {
+  id          String   @id @default(uuid())
+  nome        String
+  usuario     String   @unique
+  senhaHash   String   @map("senha_hash")
+  ativo       Boolean  @default(true)
+  role        Role     @default(funcionario)
+  criadoEm   DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  vistorias   Vistoria[]
+  fotos       Foto[]
+  auditLogs   AuditLog[]
+
+  @@map("funcionarios")
+}
+
+model Cliente {
+  id          String   @id @default(uuid())
+  nome        String
+  documento   String
+  telefone    String?
+  email       String?
+  criadoEm   DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  vistorias   Vistoria[]
+
+  @@map("clientes")
+}
+
+model Veiculo {
+  id            String   @id @default(uuid())
+  placa         String
+  marca         String
+  modelo        String
+  ano           Int
+  cor           String
+  chassi        String?
+  quilometragem Int
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  vistorias     Vistoria[]
+
+  @@map("veiculos")
+}
+
+model Vistoria {
+  id                  String         @id @default(uuid())
+  veiculoId           String         @map("veiculo_id")
+  clienteId           String         @map("cliente_id")
+  funcionarioId       String         @map("funcionario_id")
+  dataInicio          DateTime       @default(now()) @map("data_inicio")
+  dataFim             DateTime?      @map("data_fim")
+  status              StatusVistoria @default(rascunho)
+  observacoesGerais   String?        @map("observacoes_gerais")
+  nivelSujeiraInterna String?        @map("nivel_sujeira_interna")
+  nivelSujeiraExterna String?        @map("nivel_sujeira_externa")
+  criadoEm           DateTime       @default(now()) @map("criado_em")
+  atualizadoEm       DateTime       @updatedAt @map("atualizado_em")
+
+  veiculo       Veiculo       @relation(fields: [veiculoId], references: [id])
+  cliente       Cliente       @relation(fields: [clienteId], references: [id])
+  funcionario   Funcionario   @relation(fields: [funcionarioId], references: [id])
+  pneus         Pneu[]
+  danos         Dano[]
+  itensFaltantes ItemFaltante[]
+  fotos         Foto[]
+  assinaturas   Assinatura[]
+
+  @@map("vistorias")
+}
+
+model Pneu {
+  id          String      @id @default(uuid())
+  vistoriaId  String      @map("vistoria_id")
+  posicao     PosicaoPneu
+  estado      EstadoPneu
+  observacoes String?
+  criadoEm   DateTime    @default(now()) @map("criado_em")
+
+  vistoria    Vistoria    @relation(fields: [vistoriaId], references: [id])
+
+  @@map("pneus")
+}
+
+model Dano {
+  id          String        @id @default(uuid())
+  vistoriaId  String        @map("vistoria_id")
+  tipo        TipoDano
+  localizacao String
+  gravidade   GravidadeDano
+  descricao   String?
+  criadoEm   DateTime      @default(now()) @map("criado_em")
+
+  vistoria    Vistoria      @relation(fields: [vistoriaId], references: [id])
+  fotos       Foto[]
+
+  @@map("danos")
+}
+
+model ItemFaltante {
+  id          String   @id @default(uuid())
+  vistoriaId  String   @map("vistoria_id")
+  nome        String
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  vistoria    Vistoria @relation(fields: [vistoriaId], references: [id])
+
+  @@map("itens_faltantes")
+}
+
+model Foto {
+  id            String      @id @default(uuid())
+  vistoriaId    String      @map("vistoria_id")
+  danoId        String?     @map("dano_id")
+  funcionarioId String      @map("funcionario_id")
+  caminho       String
+  mimeType      String      @map("mime_type")
+  tamanhoBytes  Int         @map("tamanho_bytes")
+  dataHora      DateTime    @default(now()) @map("data_hora")
+
+  vistoria      Vistoria    @relation(fields: [vistoriaId], references: [id])
+  dano          Dano?       @relation(fields: [danoId], references: [id])
+  funcionario   Funcionario @relation(fields: [funcionarioId], references: [id])
+
+  @@map("fotos")
+}
+
+model Assinatura {
+  id          String         @id @default(uuid())
+  vistoriaId  String         @map("vistoria_id")
+  tipo        TipoAssinatura
+  imagemBase64 String        @map("imagem_base64")
+  dataHora    DateTime       @default(now()) @map("data_hora")
+
+  vistoria    Vistoria       @relation(fields: [vistoriaId], references: [id])
+
+  @@map("assinaturas")
+}
+
+model AuditLog {
+  id              String      @id @default(uuid())
+  tabela          String
+  registroId      String      @map("registro_id")
+  acao            String
+  funcionarioId   String?     @map("funcionario_id")
+  dataHora        DateTime    @default(now()) @map("data_hora")
+  dadosAnteriores Json?       @map("dados_anteriores")
+
+  funcionario     Funcionario? @relation(fields: [funcionarioId], references: [id])
+
+  @@map("audit_logs")
+}
