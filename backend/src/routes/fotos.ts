@@ -8,11 +8,15 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+// Allowlist of safe image extensions to prevent double-extension attacks (e.g. "evil.php.jpg")
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic']);
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    const ext = path.extname(file.originalname).toLowerCase();
+    const safeExt = ALLOWED_EXTENSIONS.has(ext) ? ext : '.jpg';
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
   },
 });
 
@@ -67,7 +71,11 @@ fotosRouter.get('/:id', async (req, res) => {
   const foto = await prisma.foto.findUnique({ where: { id: req.params.id } });
   if (!foto) return res.status(404).json({ error: 'Foto não encontrada' });
 
-  const filePath = path.join(UPLOAD_DIR, foto.caminho);
+  const filePath = path.resolve(UPLOAD_DIR, foto.caminho);
+  // Guard against path traversal: resolved path must stay within UPLOAD_DIR
+  if (!filePath.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) {
+    return res.status(400).json({ error: 'Caminho de arquivo inválido' });
+  }
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Arquivo não encontrado' });
 
   return res.sendFile(filePath);
